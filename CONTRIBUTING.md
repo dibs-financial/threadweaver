@@ -32,8 +32,8 @@ cites are.
    ```
 
    A change to the rails needs a test in `test/cabinet.test.ts`. A change to
-   filing needs one in `test/file.test.ts`. A change to a tool needs one in
-   `test/server.test.ts`. Any rendered text must pass the
+   filing needs one in `test/file.test.ts`, and to groups one in
+   `test/group.test.ts`. A change to a tool needs one in `test/server.test.ts`. Any rendered text must pass the
    no-raw-ids check that is already in those files.
 
 4. Describe the change in terms of the rails: what becomes current, what

@@ -23,7 +23,22 @@ export interface FileThreadInput {
   label?: string | undefined;
 }
 
-export function fileThread(draft: Cabinet, input: FileThreadInput, now = new Date()): Source {
+/** On a group card every filing carries the member doing it. */
+export interface Filer {
+  member?: string | undefined;
+}
+
+function requireMember(draft: Cabinet, filer: Filer): string | undefined {
+  if (draft.kind !== "group") return undefined;
+  if (!filer.member) throw new FilingError("This is a group card. Say who is filing (THREADWEAVER_MEMBER).");
+  if (!draft.members.some((m) => m.id === filer.member)) {
+    throw new FilingError(`"${filer.member}" is not a member of ${draft.name}. Joining a group is done by its members, not by filing.`);
+  }
+  return filer.member;
+}
+
+export function fileThread(draft: Cabinet, input: FileThreadInput, filer: Filer = {}, now = new Date()): Source {
+  const filedBy = requireMember(draft, filer);
   if (input.label !== undefined && !draft.labels.some((l) => l.name === input.label)) {
     throw new FilingError(`No shelf named "${input.label}". File the first claim with a title to create it.`);
   }
@@ -46,9 +61,13 @@ export function fileThread(draft: Cabinet, input: FileThreadInput, now = new Dat
     scope,
     ...(input.fromMessageId !== undefined ? { fromMessageId: input.fromMessageId } : {}),
     ...(input.label !== undefined ? { label: input.label } : {}),
+    ...(filedBy !== undefined ? { filedBy } : {}),
     filedAt: now.toISOString(),
     messages,
   };
+  if (existing && filedBy !== undefined && existing.filedBy !== filedBy) {
+    throw new FilingError(`That thread is already on this card, filed by ${memberName(draft, existing.filedBy)}. Only they can refile it.`);
+  }
   if (existing) {
     draft.sources[draft.sources.indexOf(existing)] = source;
   } else {
@@ -80,9 +99,10 @@ export interface FileClaimResult {
   notes: string[];
 }
 
-export function fileClaim(draft: Cabinet, input: FileClaimInput): FileClaimResult {
+export function fileClaim(draft: Cabinet, input: FileClaimInput, filer: Filer = {}): FileClaimResult {
   const notes: string[] = [];
   const byId = new Map(draft.claims.map((c) => [c.id, c]));
+  const filedBy = requireMember(draft, filer);
 
   if (input.copyOf !== undefined) {
     return recordCopy(draft, byId, input);
@@ -139,6 +159,7 @@ export function fileClaim(draft: Cabinet, input: FileClaimInput): FileClaimResul
     supersedes,
     copies: [],
     ...(input.note !== undefined ? { note: input.note } : {}),
+    ...(filedBy !== undefined ? { filedBy } : {}),
   };
 
   for (const oldId of supersedes) {
@@ -215,16 +236,28 @@ export interface UnfileResult {
  * record is removed from this cabinet only; nothing outside it is touched, and no
  * superseded rule is promoted back to current.
  */
-export function unfile(draft: Cabinet, input: UnfileInput): UnfileResult {
+export function unfile(draft: Cabinet, input: UnfileInput, filer: Filer = {}): UnfileResult {
+  const me = requireMember(draft, filer);
+  const mine = (filedBy: string | undefined) => me === undefined || filedBy === me;
+
   if (input.claimId !== undefined) {
     const at = draft.claims.findIndex((c) => c.id === input.claimId);
     if (at < 0) throw new FilingError(`No claim with id "${input.claimId}" on this card.`);
-    const [claim] = draft.claims.splice(at, 1);
-    return { claims: claim ? [claim] : [], source: null };
+    const claim = draft.claims[at]!;
+    if (!mine(claim.filedBy)) {
+      throw new FilingError(`That claim was filed by ${memberName(draft, claim.filedBy)}. Only the member who filed it can unfile it.`);
+    }
+    draft.claims.splice(at, 1);
+    return { claims: [claim], source: null };
   }
   if (input.thread) {
     const { platform, title } = input.thread;
     const claims = draft.claims.filter((c) => c.cite.platform === platform && c.cite.thread === title);
+    const source0 = draft.sources.find((s) => s.platform === platform && s.title === title);
+    const theirs = [...claims.map((c) => c.filedBy), ...(source0 ? [source0.filedBy] : [])].find((f) => !mine(f));
+    if (theirs !== undefined) {
+      throw new FilingError(`That thread was filed by ${memberName(draft, theirs)}. Only the member who filed it can unfile it.`);
+    }
     for (const c of claims) draft.claims.splice(draft.claims.indexOf(c), 1);
     for (const c of draft.claims) c.copies = c.copies.filter((k) => !(k.platform === platform && k.thread === title));
     const at = draft.sources.findIndex((s) => s.platform === platform && s.title === title);
@@ -233,6 +266,10 @@ export function unfile(draft: Cabinet, input: UnfileInput): UnfileResult {
     return { claims, source };
   }
   throw new FilingError("Say what to unfile: a claimId, or a thread by platform and title.");
+}
+
+function memberName(draft: Cabinet, id: string | undefined): string {
+  return draft.members.find((m) => m.id === id)?.name ?? id ?? "another member";
 }
 
 function nextId(prefix: string, taken: string[]): string {

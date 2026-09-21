@@ -25,6 +25,8 @@ export interface RenderedClaim {
   note?: string;
   replaced?: string;
   copies: string[];
+  /** On a group card: the member's name. */
+  filedBy?: string;
 }
 
 export interface Shelf {
@@ -46,8 +48,10 @@ export class Shelves {
   private readonly byLabel = new Map<string, Label>();
   private readonly claimsByLabel = new Map<string, Claim[]>();
   private readonly byId = new Map<string, Claim>();
+  private readonly memberNames = new Map<string, string>();
 
   constructor(readonly cabinet: Cabinet) {
+    for (const m of cabinet.members) this.memberNames.set(m.id, m.name);
     for (const label of cabinet.labels) {
       this.byLabel.set(label.name, label);
       this.claimsByLabel.set(label.name, []);
@@ -121,6 +125,7 @@ export class Shelves {
       copies: claim.copies.map(formatCopy),
     };
     if (claim.note !== undefined) out.note = claim.note;
+    if (claim.filedBy !== undefined) out.filedBy = this.memberNames.get(claim.filedBy) ?? claim.filedBy;
     if (claim.rail === "superseded" && claim.supersededBy) {
       const by = this.byId.get(claim.supersededBy);
       const when = claim.supersededOn ?? by?.cite.date;

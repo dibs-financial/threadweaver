@@ -49,6 +49,17 @@ THREADWEAVER_CABINET=~/threadweaver/mine.json node dist/index.js   # your own ca
 
 The sample cabinet stays as shipped. Filing needs a cabinet of your own, so point `THREADWEAVER_CABINET` at a file. A missing file becomes an empty private cabinet on first start.
 
+To sit at a group card, add the card and who you are:
+
+```sh
+THREADWEAVER_GROUP=/shared/bond-factory.json \
+THREADWEAVER_MEMBER=renter-desk \
+THREADWEAVER_CABINET=~/threadweaver/mine.json \
+node dist/index.js
+```
+
+The server refuses to start if the member is not on the card. Nothing is read until it is.
+
 Wire it into any MCP client. For Claude Desktop, add to `claude_desktop_config.json`:
 
 ```json
@@ -132,14 +143,20 @@ Rules the loader enforces:
 - A claim named in `supersedes` must be on the superseded rail and must point back with `supersededBy`.
 - A superseded claim must name what replaced it.
 - `cite.messageId` is allowed for the filer's bookkeeping and is never rendered.
+- A group card has at least one member, and every claim and thread on it names a member in `filedBy`.
 
 The full schema is in `src/schema.ts`. The worked example is `seed/bond-factory.json`.
 
 ## Groups
 
-- A group has its own card. Members read the group card by default.
-- Private notes mix in only when a member says **"also use my private cabinet."**
-- **Unfile** removes a thread from the group card. It does not delete the member's personal thread.
+A group card is a cabinet with `kind: "group"` and a `members` list. Every claim and thread on it records who filed it. The seed ships one: `seed/bond-factory-group.json`.
+
+- **Joining ingests nothing.** A member is a name on the card. Their private cabinet stays theirs until they file something.
+- **Members read the group card by default.** Every line shows who filed it.
+- **Private notes mix in only when a member says "also use my private cabinet."** The read tools take `includePrivate`. A private line that restates a group line becomes a pointer under it, "also filed in: your private cabinet." A private line the group has not seen comes in its own section, marked private. Nothing is blended.
+- **Filing goes to the card** as the member sitting there. `to: "private"` files to your own cabinet instead.
+- **Unfile removes from the card only.** Only the member who filed a claim or thread can unfile it, and the private cabinet is never touched.
+- **One file, many desks.** Each desk re-reads the card when it changes on disk, so two members on a shared file see each other's filings and neither loses a write. Real concurrency belongs to a hosted card; this is a shared file.
 
 ## VoiceFit (RubyVox)
 
@@ -172,14 +189,15 @@ The seed workspace ships with one worked example so you can see the rails in act
 src/
   schema.ts      cabinet, label, claim, cite, rail; loader cross-checks
   cabinet.ts     shelves: list, locate, search current
+  desk.ts        one seat: the card read by default, the private cabinet beside it
   file.ts        the file verb: file_thread, file_claim, unfile, and the rules they keep
   store.ts       one cabinet on disk; every change re-checked, then written atomically
   pack.ts        the continue pack (markdown, cites, history offer)
   voice.ts       VoiceFit: current / chatty / loud
   server.ts      the five read tools and the three file tools
-  index.ts       stdio entry point
-seed/            bond-factory.json, the sample cabinet
-test/            vitest: rails, packs, voice, filing, the store, and the server over an in-memory transport
+  index.ts       stdio entry point; THREADWEAVER_CABINET, THREADWEAVER_GROUP, THREADWEAVER_MEMBER
+seed/            bond-factory.json (sample) and bond-factory-group.json (group card)
+test/            vitest: rails, packs, voice, filing, the store, groups, and the server over an in-memory transport
 .github/         issue templates, CODEOWNERS, CI (build + test, markdownlint + link check)
 assets/          social preview (og.jpg), favicon
 ABOUT.md         the GitHub About copy and topics for this repo
@@ -187,7 +205,7 @@ CONTRIBUTING.md  how to file a wrong answer and open a pull request
 SECURITY.md      how to report a leak or card tampering privately
 ```
 
-Not here yet: group cards, mixing a private cabinet into a group, and the optimizer. One process serves one cabinet.
+Not here yet: a hosted card, capture from the chat interfaces, and the optimizer.
 
 ## Contributing
 

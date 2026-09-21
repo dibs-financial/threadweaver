@@ -221,7 +221,7 @@ describe("store", () => {
     const dir = await mkdtemp(path.join(tmpdir(), "tw-"));
     const file = path.join(dir, "mine.json");
     const store = await Store.open(file, { writable: true });
-    expect(store.cabinet).toEqual({ name: "mine", kind: "private", labels: [], claims: [], sources: [] });
+    expect(store.cabinet).toEqual({ name: "mine", kind: "private", members: [], labels: [], claims: [], sources: [] });
 
     await store.mutate((d) => fileThread(d, waterfallThread));
     await store.mutate((d) =>
@@ -311,7 +311,7 @@ describe("file tools over MCP", () => {
 
     const gone = await client.callTool({ name: "unfile", arguments: { thread: { platform: "Gemini", title: "June bond revision" } } });
     expect(textOf(gone)).toContain("Unfiled 1 claim from this card");
-    expect(textOf(gone)).toContain("It still exists wherever it was written.");
+    expect(textOf(gone)).toContain("Off this card only: it still exists wherever it was written.");
     const after = textOf(await client.callTool({ name: "continue", arguments: { label: "bond-rule" } }));
     expect(after).toContain("Nothing is current on this shelf.");
 

@@ -30,12 +30,20 @@ export const Copy = z.object({
 });
 export type Copy = z.infer<typeof Copy>;
 
+export const Member = z.object({
+  id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, "member ids are kebab-case"),
+  name: z.string().min(1),
+});
+export type Member = z.infer<typeof Member>;
+
 export const Claim = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   rail: Rail,
   text: z.string().min(1),
   cite: Cite,
+  /** In a group cabinet: the member who filed it. Only they can unfile it. */
+  filedBy: z.string().optional(),
   /** Ids of claims this one replaced. Those must be on the superseded rail. */
   supersedes: z.array(z.string()).default([]),
   /** Set on a superseded claim: the id of the claim that replaced it, and when. */
@@ -71,6 +79,7 @@ export const Source = z.object({
   fromMessageId: z.string().optional(),
   /** The shelf the filer meant this for, if they said "this label". */
   label: z.string().optional(),
+  filedBy: z.string().optional(),
   filedAt: z.string().min(1),
   messages: z.array(Message),
 });
@@ -86,6 +95,8 @@ export type Label = z.infer<typeof Label>;
 export const Cabinet = z.object({
   name: z.string().min(1),
   kind: z.enum(["private", "group", "sample"]),
+  /** A group card has members. Joining one ingests nothing; it only lets you read and file. */
+  members: z.array(Member).default([]),
   labels: z.array(Label),
   claims: z.array(Claim),
   sources: z.array(Source).default([]),
@@ -111,6 +122,21 @@ export function parseCabinet(input: unknown): Cabinet {
   }
   if (new Set(cabinet.sources.map((s) => s.id)).size !== cabinet.sources.length) {
     throw new CabinetError("source ids must be unique");
+  }
+  const members = new Set(cabinet.members.map((m) => m.id));
+  if (members.size !== cabinet.members.length) {
+    throw new CabinetError("member ids must be unique");
+  }
+  if (cabinet.kind === "group") {
+    if (members.size === 0) throw new CabinetError("a group cabinet needs at least one member");
+    for (const claim of cabinet.claims) {
+      if (!claim.filedBy) throw new CabinetError(`claim ${claim.id} on a group card must say who filed it`);
+      if (!members.has(claim.filedBy)) throw new CabinetError(`claim ${claim.id} was filed by ${claim.filedBy}, who is not a member`);
+    }
+    for (const source of cabinet.sources) {
+      if (!source.filedBy) throw new CabinetError(`thread ${source.id} on a group card must say who filed it`);
+      if (!members.has(source.filedBy)) throw new CabinetError(`thread ${source.id} was filed by ${source.filedBy}, who is not a member`);
+    }
   }
   for (const claim of cabinet.claims) {
     if (!labels.has(claim.label)) {
