@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Build output
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Logs and caches
+*.log
+npm-debug.log*
+yarn-error.log*
+.cache/
+.turbo/
+
+# Screenshots and scratch captures
+screenshots/
+*.screenshot.png
+Screen Shot*.png
+Screenshot*.png
+CleanShot*.png
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
