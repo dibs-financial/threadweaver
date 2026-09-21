@@ -17,6 +17,8 @@ export interface LabelSummary {
 }
 
 export interface RenderedClaim {
+  /** For the filer to reference in file_claim. Never rendered in prose. */
+  id: string;
   rail: Rail;
   text: string;
   cite: string;
@@ -112,6 +114,7 @@ export class Shelves {
 
   private render(claim: Claim): RenderedClaim {
     const out: RenderedClaim = {
+      id: claim.id,
       rail: claim.rail,
       text: claim.text,
       cite: formatCite(claim.cite),

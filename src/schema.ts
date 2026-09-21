@@ -47,6 +47,35 @@ export const Claim = z.object({
 });
 export type Claim = z.infer<typeof Claim>;
 
+const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
+
+export const Message = z.object({
+  id: z.string().optional(),
+  role: z.enum(["user", "assistant", "system", "other"]).default("other"),
+  author: z.string().optional(),
+  date: IsoDate.optional(),
+  text: z.string().min(1),
+});
+export type Message = z.infer<typeof Message>;
+
+/**
+ * A filed thread. This is the only way text enters a cabinet: someone said
+ * "file this thread", whole or from one message. Nothing is vacuumed.
+ */
+export const Source = z.object({
+  id: z.string().min(1),
+  platform: Platform,
+  title: z.string().min(1),
+  date: IsoDate,
+  scope: z.enum(["whole", "from"]),
+  fromMessageId: z.string().optional(),
+  /** The shelf the filer meant this for, if they said "this label". */
+  label: z.string().optional(),
+  filedAt: z.string().min(1),
+  messages: z.array(Message),
+});
+export type Source = z.infer<typeof Source>;
+
 export const Label = z.object({
   name: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, "label names are kebab-case"),
   title: z.string().min(1),
@@ -59,6 +88,7 @@ export const Cabinet = z.object({
   kind: z.enum(["private", "group", "sample"]),
   labels: z.array(Label),
   claims: z.array(Claim),
+  sources: z.array(Source).default([]),
 });
 export type Cabinet = z.infer<typeof Cabinet>;
 
@@ -75,6 +105,12 @@ export function parseCabinet(input: unknown): Cabinet {
 
   if (byId.size !== cabinet.claims.length) {
     throw new CabinetError("claim ids must be unique");
+  }
+  if (new Set(cabinet.labels.map((l) => l.name)).size !== cabinet.labels.length) {
+    throw new CabinetError("label names must be unique");
+  }
+  if (new Set(cabinet.sources.map((s) => s.id)).size !== cabinet.sources.length) {
+    throw new CabinetError("source ids must be unique");
   }
   for (const claim of cabinet.claims) {
     if (!labels.has(claim.label)) {

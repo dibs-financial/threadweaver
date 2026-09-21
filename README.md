@@ -43,9 +43,11 @@ The MCP server ships in this repo. It speaks stdio and serves one cabinet, the B
 ```sh
 npm install
 npm run build
-node dist/index.js            # serves seed/bond-factory.json
-THREADWEAVER_CABINET=/path/to/my-cabinet.json node dist/index.js
+node dist/index.js                                          # serves seed/bond-factory.json, read-only
+THREADWEAVER_CABINET=~/threadweaver/mine.json node dist/index.js   # your own cabinet; created empty if missing
 ```
+
+The sample cabinet stays as shipped. Filing needs a cabinet of your own, so point `THREADWEAVER_CABINET` at a file. A missing file becomes an empty private cabinet on first start.
 
 Wire it into any MCP client. For Claude Desktop, add to `claude_desktop_config.json`:
 
@@ -73,8 +75,31 @@ When ThreadWeaver is wired in as an MCP server or tool set, the model gets:
 | `search_current` | Search across current + open only |
 | `continue` | The default continue pack for a label: live claims with cites |
 | `continue_voice` | Same pack on a spoken budget, no ids, for RubyVox |
+| `file_thread` | Put a thread on record, whole or from one message |
+| `file_claim` | Place one claim on a rail with its cite; supersede or record a copy |
+| `unfile` | Take a claim, or a thread's claims, off this card |
 
 If the tools fail, the model says the card is unreachable. It does not improvise policy from its own chat history.
+
+## File a thread
+
+The server never reads a thread for you. The model you are talking to reads it, proposes the claims, and ThreadWeaver keeps the rails honest. When you say **file this thread**:
+
+1. The model calls `file_thread` with the platform, date, title, and the messages you handed it. Whole thread, or from one message. Nothing else is ingested.
+2. For each rule the thread states, the model calls `file_claim` with the text, the rail, and a cite to that thread. If it replaces a rule on file, `supersedes` names it. If it restates one, `copyOf` names it.
+3. The card updates and the model reads it back to you.
+
+What `file_claim` enforces:
+
+- **Newer supersedes older.** A cite dated before the rule it would replace is refused.
+- **A RubyVox call is a source, not a new current.** It can only be filed as a copy of the claim it spoke, and its wording never becomes the wording on file.
+- **Restatements are copies.** An exact restatement is refused and pointed at `copyOf`. A copy keeps one wording and points at the other room. `keepWording: "new"` swaps which one.
+- **Similar is not current.** A near-duplicate is filed as its own line and flagged. It is never merged.
+- **Two current lines stay two lines.** The response says so.
+- **An open item does not supersede.** It reopens nothing.
+- **A copy of a dead rule stays dead.**
+
+`unfile` removes a claim, or every claim citing one thread, from this card. It never promotes a superseded rule back to current, and it touches nothing outside this cabinet. Every accepted change is re-checked against the rails and written to the cabinet file before the tool returns; a rejected change leaves the file untouched.
 
 ## Cabinet format
 
@@ -98,6 +123,8 @@ A cabinet is one JSON file: labels and claims. Each claim sits on one rail and c
   ]
 }
 ```
+
+Filed threads sit alongside the claims in `sources`, with their messages, so a cite resolves to something on record.
 
 Rules the loader enforces:
 
@@ -145,12 +172,14 @@ The seed workspace ships with one worked example so you can see the rails in act
 src/
   schema.ts      cabinet, label, claim, cite, rail; loader cross-checks
   cabinet.ts     shelves: list, locate, search current
+  file.ts        the file verb: file_thread, file_claim, unfile, and the rules they keep
+  store.ts       one cabinet on disk; every change re-checked, then written atomically
   pack.ts        the continue pack (markdown, cites, history offer)
   voice.ts       VoiceFit: current / chatty / loud
-  server.ts      the five MCP tools
+  server.ts      the five read tools and the three file tools
   index.ts       stdio entry point
 seed/            bond-factory.json, the sample cabinet
-test/            vitest: rails, packs, voice, and the server over an in-memory transport
+test/            vitest: rails, packs, voice, filing, the store, and the server over an in-memory transport
 .github/         issue templates, CODEOWNERS, CI (build + test, markdownlint + link check)
 assets/          social preview (og.jpg), favicon
 ABOUT.md         the GitHub About copy and topics for this repo
@@ -158,7 +187,7 @@ CONTRIBUTING.md  how to file a wrong answer and open a pull request
 SECURITY.md      how to report a leak or card tampering privately
 ```
 
-Not here yet: the `file` verb (turning a pasted thread into claims), group cards, and the optimizer. The server reads a cabinet; it does not write one.
+Not here yet: group cards, mixing a private cabinet into a group, and the optimizer. One process serves one cabinet.
 
 ## Contributing
 
