@@ -3,6 +3,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { loadCabinet } from "../src/cabinet.js";
 import { createServer } from "../src/server.js";
+import { Store } from "../src/store.js";
 
 const SEED = new URL("../seed/bond-factory.json", import.meta.url).pathname;
 
@@ -16,7 +17,7 @@ describe("mcp server", () => {
   let close: () => Promise<void>;
 
   beforeEach(async () => {
-    const server = createServer(await loadCabinet(SEED));
+    const server = createServer(Store.inMemory(await loadCabinet(SEED), false));
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     await server.connect(serverTransport);
     client = new Client({ name: "test", version: "0.0.0" });
@@ -31,12 +32,23 @@ describe("mcp server", () => {
     await close();
   });
 
-  it("exposes exactly the five tools", async () => {
+  it("exposes the five read tools and the three file tools", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ["continue", "continue_voice", "list_labels", "locate_label", "search_current"].sort(),
+      ["continue", "continue_voice", "file_claim", "file_thread", "list_labels", "locate_label", "search_current", "unfile"].sort(),
     );
-    for (const t of tools) expect(t.annotations?.readOnlyHint).toBe(true);
+    const readOnly = tools.filter((t) => t.annotations?.readOnlyHint).map((t) => t.name).sort();
+    expect(readOnly).toEqual(["continue", "continue_voice", "list_labels", "locate_label", "search_current"]);
+    expect(tools.find((t) => t.name === "unfile")?.annotations?.destructiveHint).toBe(true);
+  });
+
+  it("refuses to file into the read-only sample cabinet", async () => {
+    const r = await client.callTool({
+      name: "file_claim",
+      arguments: { label: "bond-rule", text: "x", rail: "open", cite: { platform: "Grok", date: "2026-06-01", thread: "t" } },
+    });
+    expect(r.isError).toBe(true);
+    expect(textOf(r)).toContain("read-only");
   });
 
   it("list_labels says what it can talk about", async () => {

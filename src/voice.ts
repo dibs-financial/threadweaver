@@ -1,4 +1,4 @@
-import type { Shelf } from "./cabinet.js";
+import type { RenderedClaim, Shelf } from "./cabinet.js";
 import { speakDate } from "./cite.js";
 
 export type VoiceMode = "current" | "chatty" | "loud";
@@ -12,8 +12,9 @@ export type VoiceMode = "current" | "chatty" | "loud";
  */
 export function renderVoice(shelf: Shelf, mode: VoiceMode = "current"): string {
   const parts: string[] = [];
-  const history = shelf.superseded?.[0] ?? null;
-  const replacedOn = replacedDate(shelf);
+  const latest = latestReplacement(shelf);
+  const history = latest?.claim ?? null;
+  const replacedOn = latest?.on ?? null;
 
   if (mode === "loud" && replacedOn) {
     parts.push(
@@ -48,12 +49,15 @@ export function renderVoice(shelf: Shelf, mode: VoiceMode = "current"): string {
   return parts.join(" ");
 }
 
-function replacedDate(shelf: Shelf): string | null {
-  for (const c of shelf.superseded ?? []) {
-    const m = /replaced on (\d{4}-\d{2}-\d{2})/.exec(c.replaced ?? "");
-    if (m?.[1]) return m[1];
+/** The most recently replaced rule is the one a listener would still have in their head. */
+function latestReplacement(shelf: Shelf): { claim: RenderedClaim; on: string } | null {
+  let best: { claim: RenderedClaim; on: string } | null = null;
+  for (const claim of shelf.superseded ?? []) {
+    const m = /replaced on (\d{4}-\d{2}-\d{2})/.exec(claim.replaced ?? "");
+    const on = m?.[1];
+    if (on && (!best || on > best.on)) best = { claim, on };
   }
-  return null;
+  return best;
 }
 
 /** Turn `Claude, 2026-05-14, "Bond Factory waterfall v2"` into words. */
