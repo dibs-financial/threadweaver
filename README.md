@@ -23,7 +23,7 @@ ThreadWeaver fixes the source of truth, not the chatbot:
 
 ## How it works
 
-```
+```text
    Grok ──┐
 ChatGPT ──┤   file this thread    ┌──────────────────────┐   continue / search_current   ┌────────────┐
  Claude ──┼──────────────────────►│  Living State Card   │──────────────────────────────►│ any model  │
@@ -83,9 +83,12 @@ The seed workspace ships with one worked example so you can see the rails in act
 
 ## Repository layout
 
-```
+```text
+.github/       issue templates, CODEOWNERS, docs CI (markdownlint + link check)
 assets/        social preview (og.jpg), favicon
 ABOUT.md       the GitHub About copy and topics for this repo
+CONTRIBUTING.md how to file a wrong answer and open a pull request
+SECURITY.md    how to report a leak or card tampering privately
 README.md      this file
 ```
 
@@ -93,8 +96,8 @@ Product code lands here as it is opened up. Watch the repo for releases.
 
 ## Contributing
 
-Open an issue with the label you were trying to file and what the card said. Cites (platform + date + thread title) make a bug report reproducible; screenshots of chat windows do not.
+Open an issue with the **card said the wrong thing** template: the label, what the card said, what it should have said, and the cite for the claim that should have won. Cites (platform + date + thread title) make a bug report reproducible; screenshots of chat windows do not. See `CONTRIBUTING.md` for pull requests.
 
 ## License
 
-To be announced. Until a `LICENSE` file is added, all rights reserved by dibs-financial.
+[MIT](LICENSE).

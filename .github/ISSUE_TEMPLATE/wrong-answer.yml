@@ -1,0 +1,68 @@
+name: The card said the wrong thing
+description: A model answered from a stale, missing, or blended claim.
+title: "[card] <label>: <one-line summary>"
+labels: ["card"]
+body:
+  - type: input
+    id: label
+    attributes:
+      label: Label
+      description: The shelf you asked about, as list_labels names it.
+      placeholder: bond-rule
+    validations:
+      required: true
+  - type: dropdown
+    id: model
+    attributes:
+      label: Which model answered
+      options:
+        - Grok
+        - ChatGPT
+        - Claude
+        - Gemini
+        - Perplexity
+        - RubyVox
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: said
+    attributes:
+      label: What the card said
+      description: Paste the answer as given. Include the cite it offered, if any.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What it should have said
+    validations:
+      required: true
+  - type: input
+    id: cite
+    attributes:
+      label: Cite for the claim that should have won
+      description: Platform + date + thread title. Not a message id.
+      placeholder: "Claude, 2026-05-14, \"Bond Factory waterfall v2\""
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong
+      options:
+        - A superseded claim was treated as current
+        - Two current lines were blended into one
+        - A current claim was missing
+        - The cite was wrong or missing
+        - A copy in another room was not pointed at
+        - Something else
+    validations:
+      required: true
+  - type: checkboxes
+    id: cabinet
+    attributes:
+      label: Cabinet
+      options:
+        - label: This was the Bond Factory sample cabinet
+        - label: This was a group card, not my private cabinet
