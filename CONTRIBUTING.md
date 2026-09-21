@@ -22,15 +22,22 @@ cites are.
 1. Branch from `main`.
 2. Keep one change per pull request. A docs fix and a schema change are two
    PRs.
-3. Run the docs check locally before pushing:
+3. Run the checks locally before pushing:
 
    ```sh
-   npx markdownlint-cli2 "**/*.md"
+   npm install
+   npm run typecheck
+   npm test
+   npm run lint:md
    ```
+
+   A change to the rails needs a test in `test/cabinet.test.ts`. A change to a
+   tool needs one in `test/server.test.ts`. Any rendered text must pass the
+   no-raw-ids check that is already in those files.
 
 4. Describe the change in terms of the rails: what becomes current, what
    becomes open, what is superseded, and by which cite.
-5. Wait for the `docs` check to pass and for a code owner review.
+5. Wait for the `build` and `docs` checks to pass and for a code owner review.
 
 ## Commit messages
 
