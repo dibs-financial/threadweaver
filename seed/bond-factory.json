@@ -1,0 +1,46 @@
+{
+  "name": "Bond Factory",
+  "kind": "sample",
+  "labels": [
+    {
+      "name": "bond-rule",
+      "title": "Who funds the $75k bond and how margin is split",
+      "summary": "The bond deal for the Bond Factory rental. Funding, cost recovery, and the profit split."
+    },
+    {
+      "name": "residual-basis",
+      "title": "How residual profit is measured",
+      "summary": "Whether the 80/20 residual is computed per load or from a monthly pool."
+    }
+  ],
+  "claims": [
+    {
+      "id": "bond-rule-1",
+      "label": "bond-rule",
+      "rail": "superseded",
+      "text": "The renter funds the $75k bond up front and keeps all margin after cost.",
+      "cite": { "platform": "Grok", "date": "2026-04-02", "thread": "Bond Factory one-pager", "messageId": "m8" },
+      "supersededBy": "bond-rule-2",
+      "supersededOn": "2026-05-14"
+    },
+    {
+      "id": "bond-rule-2",
+      "label": "bond-rule",
+      "rail": "current",
+      "text": "The provider supplies the $75k bond. Margin recovers that cost first; remaining profit splits 80/20.",
+      "cite": { "platform": "Claude", "date": "2026-05-14", "thread": "Bond Factory waterfall v2", "messageId": "thr_bf_waterfall_v2" },
+      "supersedes": ["bond-rule-1"],
+      "copies": [
+        { "platform": "ChatGPT", "date": "2026-05-16", "thread": "May waterfall" }
+      ]
+    },
+    {
+      "id": "residual-basis-1",
+      "label": "residual-basis",
+      "rail": "open",
+      "text": "Residual basis: per-load or monthly pool.",
+      "cite": { "platform": "ChatGPT", "date": "2026-05-20", "thread": "May waterfall" },
+      "note": "This does not reopen who funds the bond."
+    }
+  ]
+}

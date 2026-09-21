@@ -36,6 +36,32 @@ RubyVox ──┘        this label)    │  superseded          │            
 2. **Weave.** ThreadWeaver places each claim on a rail. A newer rule supersedes an older one. Restatements of the same rule in two rooms are copies: the best wording wins and the other room gets a pointer, not a duplicate.
 3. **Continue.** Any model with the ThreadWeaver tools (or a pasted card) answers from the pack: current + open, with cites. Conflicting current lines stay two lines. No fake compromise.
 
+## Run it
+
+The MCP server ships in this repo. It speaks stdio and serves one cabinet, the Bond Factory sample by default.
+
+```sh
+npm install
+npm run build
+node dist/index.js            # serves seed/bond-factory.json
+THREADWEAVER_CABINET=/path/to/my-cabinet.json node dist/index.js
+```
+
+Wire it into any MCP client. For Claude Desktop, add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "threadweaver": {
+      "command": "node",
+      "args": ["/absolute/path/to/threadweaver/dist/index.js"]
+    }
+  }
+}
+```
+
+Then ask: **"what's the bond deal?"** The model calls `continue` on `bond-rule` and answers from the current card, with the cite.
+
 ## Tools
 
 When ThreadWeaver is wired in as an MCP server or tool set, the model gets:
@@ -49,6 +75,38 @@ When ThreadWeaver is wired in as an MCP server or tool set, the model gets:
 | `continue_voice` | Same pack on a spoken budget, no ids, for RubyVox |
 
 If the tools fail, the model says the card is unreachable. It does not improvise policy from its own chat history.
+
+## Cabinet format
+
+A cabinet is one JSON file: labels and claims. Each claim sits on one rail and carries a cite.
+
+```json
+{
+  "name": "Bond Factory",
+  "kind": "sample",
+  "labels": [{ "name": "bond-rule", "title": "Who funds the $75k bond and how margin is split" }],
+  "claims": [
+    {
+      "id": "bond-rule-2",
+      "label": "bond-rule",
+      "rail": "current",
+      "text": "The provider supplies the $75k bond. Margin recovers that cost first; remaining profit splits 80/20.",
+      "cite": { "platform": "Claude", "date": "2026-05-14", "thread": "Bond Factory waterfall v2" },
+      "supersedes": ["bond-rule-1"],
+      "copies": [{ "platform": "ChatGPT", "date": "2026-05-16", "thread": "May waterfall" }]
+    }
+  ]
+}
+```
+
+Rules the loader enforces:
+
+- `rail` is `current`, `open`, or `superseded`.
+- A claim named in `supersedes` must be on the superseded rail and must point back with `supersededBy`.
+- A superseded claim must name what replaced it.
+- `cite.messageId` is allowed for the filer's bookkeeping and is never rendered.
+
+The full schema is in `src/schema.ts`. The worked example is `seed/bond-factory.json`.
 
 ## Groups
 
@@ -84,15 +142,23 @@ The seed workspace ships with one worked example so you can see the rails in act
 ## Repository layout
 
 ```text
-.github/       issue templates, CODEOWNERS, docs CI (markdownlint + link check)
-assets/        social preview (og.jpg), favicon
-ABOUT.md       the GitHub About copy and topics for this repo
-CONTRIBUTING.md how to file a wrong answer and open a pull request
-SECURITY.md    how to report a leak or card tampering privately
-README.md      this file
+src/
+  schema.ts      cabinet, label, claim, cite, rail; loader cross-checks
+  cabinet.ts     shelves: list, locate, search current
+  pack.ts        the continue pack (markdown, cites, history offer)
+  voice.ts       VoiceFit: current / chatty / loud
+  server.ts      the five MCP tools
+  index.ts       stdio entry point
+seed/            bond-factory.json, the sample cabinet
+test/            vitest: rails, packs, voice, and the server over an in-memory transport
+.github/         issue templates, CODEOWNERS, CI (build + test, markdownlint + link check)
+assets/          social preview (og.jpg), favicon
+ABOUT.md         the GitHub About copy and topics for this repo
+CONTRIBUTING.md  how to file a wrong answer and open a pull request
+SECURITY.md      how to report a leak or card tampering privately
 ```
 
-Product code lands here as it is opened up. Watch the repo for releases.
+Not here yet: the `file` verb (turning a pasted thread into claims), group cards, and the optimizer. The server reads a cabinet; it does not write one.
 
 ## Contributing
 
