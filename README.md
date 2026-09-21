@@ -200,6 +200,7 @@ seed/            bond-factory.json (sample) and bond-factory-group.json (group c
 test/            vitest: rails, packs, voice, filing, the store, groups, and the server over an in-memory transport
 .github/         issue templates, CODEOWNERS, CI (build + test, markdownlint + link check)
 assets/          social preview (og.jpg), favicon
+docs/pricing.md  revenue streams and price points, open server / paid cloud
 ABOUT.md         the GitHub About copy and topics for this repo
 CONTRIBUTING.md  how to file a wrong answer and open a pull request
 SECURITY.md      how to report a leak or card tampering privately
