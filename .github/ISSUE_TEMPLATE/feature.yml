@@ -1,0 +1,25 @@
+name: Proposal
+description: A new verb, tool, or rail behaviour.
+title: "[proposal] <one-line summary>"
+labels: ["proposal"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What decision gets made worse today
+      description: Describe the moment a person reaches for ThreadWeaver and it falls short.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations:
+      required: true
+  - type: textarea
+    id: rails
+    attributes:
+      label: Effect on the rails
+      description: Can this ever let a superseded claim read as current, or blend two current lines? If so, how is that prevented?
+    validations:
+      required: true

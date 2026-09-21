@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security report
+    url: https://github.com/dibs-financial/threadweaver/security/advisories/new
+    about: Private cabinet leaks, card tampering, committed secrets. Never a public issue.
