@@ -9,7 +9,8 @@
   },
   "files": [
     "dist",
-    "seed"
+    "seed",
+    "prompts"
   ],
   "engines": {
     "node": ">=20"

@@ -1,4 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { UnknownLabel } from "./cabinet.js";
 import { formatCite } from "./cite.js";
@@ -11,6 +14,9 @@ import { renderVoice } from "./voice.js";
 
 export const SERVER_NAME = "threadweaver";
 export const SERVER_VERSION = "0.1.0";
+
+/** The persona for whichever model sits at this desk. Served as the `mouth` prompt. */
+export const MOUTH_PROMPT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "prompts", "mouth.md");
 
 const INSTRUCTIONS = [
   "ThreadWeaver serves one Living State Card per label. Answer from current + open only.",
@@ -281,12 +287,30 @@ export function createServer(deskOrStore: Desk | Store): McpServer {
     },
   );
 
+  server.registerPrompt(
+    "mouth",
+    {
+      title: "The ThreadWeaver mouth",
+      description: "How to speak from the card: current + open with cites, history on request, one label at a time, file on request. Paste into any model's instructions, or load it here.",
+    },
+    async () => {
+      const text = await readFile(MOUTH_PROMPT, "utf8");
+      return { messages: [{ role: "user", content: { type: "text", text: afterRule(text) } }] };
+    },
+  );
+
   function labelList(s: Store): string {
     const names = s.shelves.listLabels().map((l) => l.name);
     return names.length ? names.join(", ") : "none yet";
   }
 
   return server;
+}
+
+/** The file opens with a note for humans; the prompt proper starts after the first rule. */
+function afterRule(markdown: string): string {
+  const at = markdown.indexOf("\n---\n");
+  return at >= 0 ? markdown.slice(at + 5).trim() : markdown.trim();
 }
 
 function sourceSummary(source: { id: string; platform: string; title: string; date: string; scope: string; messages: unknown[] }) {

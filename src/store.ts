@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Shelves } from "./cabinet.js";
-import { parseCabinet, type Cabinet } from "./schema.js";
+import { CABINET_VERSION, parseCabinet, type Cabinet } from "./schema.js";
 
 /**
  * Holds one cabinet and writes it back after every accepted change.
@@ -94,7 +94,7 @@ export class ReadOnlyCabinet extends Error {
 }
 
 export function emptyCabinet(name: string): Cabinet {
-  return { name, kind: "private", members: [], labels: [], claims: [], sources: [] };
+  return { version: CABINET_VERSION, name, kind: "private", members: [], labels: [], claims: [], sources: [] };
 }
 
 let writeSeq = 0;

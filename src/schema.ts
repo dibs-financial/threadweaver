@@ -92,7 +92,12 @@ export const Label = z.object({
 });
 export type Label = z.infer<typeof Label>;
 
+/** The cabinet format this server reads and writes. A newer file is refused, not guessed at. */
+export const CABINET_VERSION = 1;
+
 export const Cabinet = z.object({
+  /** Missing means 1: cabinets written before the field existed. */
+  version: z.number().int().positive().default(CABINET_VERSION),
   name: z.string().min(1),
   kind: z.enum(["private", "group", "sample"]),
   /** A group card has members. Joining one ingests nothing; it only lets you read and file. */
@@ -110,6 +115,12 @@ export class CabinetError extends Error {}
  * a claim on `supersedes` must be superseded, and a superseded claim must name its replacement.
  */
 export function parseCabinet(input: unknown): Cabinet {
+  const declared = typeof input === "object" && input !== null ? (input as { version?: unknown }).version : undefined;
+  if (typeof declared === "number" && declared > CABINET_VERSION) {
+    throw new CabinetError(
+      `This cabinet is format version ${declared}; this server reads version ${CABINET_VERSION}. Update ThreadWeaver before opening it.`,
+    );
+  }
   const cabinet = Cabinet.parse(input);
   const labels = new Set(cabinet.labels.map((l) => l.name));
   const byId = new Map(cabinet.claims.map((c) => [c.id, c]));
