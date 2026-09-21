@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Shelves } from "./cabinet.js";
 import { parseCabinet, type Cabinet } from "./schema.js";
@@ -11,6 +11,8 @@ export class Store {
   private shelvesCache: Shelves | null = null;
   /** Mutations run one at a time, in arrival order, so no change is built on a stale draft. */
   private queue: Promise<unknown> = Promise.resolve();
+
+  private loadedMtime = 0;
 
   private constructor(
     readonly path: string | null,
@@ -28,7 +30,9 @@ export class Store {
       cabinet = emptyCabinet(path.basename(file, path.extname(file)));
       await writeAtomic(file, cabinet);
     }
-    return new Store(file, cabinet, options.writable);
+    const store = new Store(file, cabinet, options.writable);
+    store.loadedMtime = await mtimeOf(file);
+    return store;
   }
 
   static inMemory(cabinet: Cabinet, writable = true): Store {
@@ -45,6 +49,19 @@ export class Store {
   }
 
   /**
+   * Pick up a change another process wrote to the same file, such as another member
+   * filing on a shared group card. Cheap when nothing changed.
+   */
+  async refresh(): Promise<void> {
+    if (!this.path) return;
+    const mtime = await mtimeOf(this.path);
+    if (mtime === this.loadedMtime) return;
+    this.current = parseCabinet(JSON.parse(await readFile(this.path, "utf8")));
+    this.loadedMtime = mtime;
+    this.shelvesCache = null;
+  }
+
+  /**
    * Apply a change to a draft copy. If the result passes the rail checks it is written
    * and becomes current; otherwise nothing changes and the error is thrown.
    */
@@ -56,10 +73,14 @@ export class Store {
   }
 
   private async apply<T>(change: (draft: Cabinet) => T): Promise<T> {
+    await this.refresh();
     const draft = structuredClone(this.current);
     const result = change(draft);
     const next = parseCabinet(draft);
-    if (this.path) await writeAtomic(this.path, next);
+    if (this.path) {
+      await writeAtomic(this.path, next);
+      this.loadedMtime = await mtimeOf(this.path);
+    }
     this.current = next;
     this.shelvesCache = null;
     return result;
@@ -73,7 +94,7 @@ export class ReadOnlyCabinet extends Error {
 }
 
 export function emptyCabinet(name: string): Cabinet {
-  return { name, kind: "private", labels: [], claims: [], sources: [] };
+  return { name, kind: "private", members: [], labels: [], claims: [], sources: [] };
 }
 
 let writeSeq = 0;
@@ -83,6 +104,10 @@ async function writeAtomic(file: string, cabinet: Cabinet): Promise<void> {
   const tmp = `${file}.${process.pid}.${++writeSeq}.tmp`;
   await writeFile(tmp, `${JSON.stringify(cabinet, null, 2)}\n`, "utf8");
   await rename(tmp, file);
+}
+
+async function mtimeOf(file: string): Promise<number> {
+  return (await stat(file)).mtimeMs;
 }
 
 function isMissing(err: unknown): boolean {
