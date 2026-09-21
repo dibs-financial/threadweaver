@@ -221,7 +221,7 @@ describe("store", () => {
     const dir = await mkdtemp(path.join(tmpdir(), "tw-"));
     const file = path.join(dir, "mine.json");
     const store = await Store.open(file, { writable: true });
-    expect(store.cabinet).toEqual({ name: "mine", kind: "private", members: [], labels: [], claims: [], sources: [] });
+    expect(store.cabinet).toEqual({ version: 1, name: "mine", kind: "private", members: [], labels: [], claims: [], sources: [] });
 
     await store.mutate((d) => fileThread(d, waterfallThread));
     await store.mutate((d) =>

@@ -75,6 +75,10 @@ Wire it into any MCP client. For Claude Desktop, add to `claude_desktop_config.j
 
 Then ask: **"what's the bond deal?"** The model calls `continue` on `bond-rule` and answers from the current card, with the cite.
 
+## The mouth
+
+The card holds the facts. The model you talk to has to speak them the same way whichever vendor it comes from: current and open with cites, history on request, one label at a time, two current lines kept apart. That voice is written down once, in `prompts/mouth.md`. Paste it into the model's instructions, or load it as the `mouth` MCP prompt from a client that supports prompts.
+
 ## Tools
 
 When ThreadWeaver is wired in as an MCP server or tool set, the model gets:
@@ -118,6 +122,7 @@ A cabinet is one JSON file: labels and claims. Each claim sits on one rail and c
 
 ```json
 {
+  "version": 1,
   "name": "Bond Factory",
   "kind": "sample",
   "labels": [{ "name": "bond-rule", "title": "Who funds the $75k bond and how margin is split" }],
@@ -139,6 +144,7 @@ Filed threads sit alongside the claims in `sources`, with their messages, so a c
 
 Rules the loader enforces:
 
+- `version` is the format version. Missing means 1. A file newer than the server is refused with a sentence, never guessed at.
 - `rail` is `current`, `open`, or `superseded`.
 - A claim named in `supersedes` must be on the superseded rail and must point back with `supersededBy`.
 - A superseded claim must name what replaced it.
@@ -197,6 +203,7 @@ src/
   server.ts      the five read tools and the three file tools
   index.ts       stdio entry point; THREADWEAVER_CABINET, THREADWEAVER_GROUP, THREADWEAVER_MEMBER
 seed/            bond-factory.json (sample) and bond-factory-group.json (group card)
+prompts/         mouth.md, the persona for whichever model sits at the desk
 test/            vitest: rails, packs, voice, filing, the store, groups, and the server over an in-memory transport
 .github/         issue templates, CODEOWNERS, CI (build + test, markdownlint + link check)
 assets/          social preview (og.jpg), favicon
